@@ -1,7 +1,7 @@
 use crate::{
     new_input,
     utils::{spanned, tuple_parser},
-    Error, Input, Result, TypeSpecifier,
+    Error, Input, ParameterSpecifier, Result, TypeSpecifier,
 };
 use alloc::vec::Vec;
 use winnow::{
@@ -68,7 +68,8 @@ impl<'a> TupleSpecifier<'a> {
 
     #[inline]
     fn parse_types(input: &mut Input<'a>) -> PResult<Vec<TypeSpecifier<'a>>> {
-        preceded(opt("tuple"), tuple_parser(TypeSpecifier::parser)).parse_next(input)
+        preceded(opt("tuple"), tuple_parser(ParameterSpecifier::parser.map(|param| param.ty)))
+            .parse_next(input)
     }
 
     /// Returns the tuple specifier as a string.
@@ -96,6 +97,20 @@ mod test {
     #[test]
     fn extra_open_parents() {
         TupleSpecifier::parse("(bool,uint256").unwrap_err();
+    }
+
+    #[test]
+    fn full_signature_tuple() {
+        assert_eq!(
+            TupleSpecifier::parse("(bool param1,uint256 param2)").unwrap(),
+            TupleSpecifier {
+                span: "(bool param1,uint256 param2)",
+                types: vec![
+                    TypeSpecifier::parse("bool").unwrap(),
+                    TypeSpecifier::parse("uint256").unwrap(),
+                ]
+            }
+        );
     }
 
     #[test]
